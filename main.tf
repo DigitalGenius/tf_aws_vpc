@@ -99,14 +99,22 @@ resource "aws_nat_gateway" "natgw" {
   depends_on = ["aws_internet_gateway.mod"]
 }
 
-data "aws_vpc_endpoint_service" "s3" {
-  service = "s3"
-}
+# Since 2.2.2021 there is an error:
+# Error: multiple VPC Endpoint Services matched; use additional constraints to reduce matches to a single VPC Endpoint Service
+# The solution is to not use aws_vpc_endpoint_service datasource, but use service_name explicitly in aws_vpc_endpoint.
+#data "aws_vpc_endpoint_service" "s3" {
+#  count = "${var.enable_s3_endpoint ? 1 : 0}"
+#
+#  service = "s3"
+#}
+
+data "aws_region" "current" {}
 
 resource "aws_vpc_endpoint" "ep" {
-  vpc_id       = "${aws_vpc.mod.id}"
-  service_name = "${data.aws_vpc_endpoint_service.s3.service_name}"
   count        = "${var.enable_s3_endpoint}"
+
+  vpc_id       = "${aws_vpc.mod.id}"
+  service_name = "com.amazonaws.${data.aws_region.current.name}.s3"
 }
 
 resource "aws_vpc_endpoint_route_table_association" "private_s3" {
